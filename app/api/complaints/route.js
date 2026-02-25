@@ -1,60 +1,48 @@
 import dbConnect from "@/lib/db";
 import Complaint from "@/models/Complaint";
 import { NextResponse } from "next/server";
-import multer from "multer";
-import path from "path";
-import fs from "fs";
 import { classifyPriority } from "@/lib/priority";
 import { sendMail } from "@/lib/mailer";
-import db from "@/lib/db";
-import { getUserFromRequest } from "@/lib/auth"; // You must implement this
+import { getUserFromRequest } from "@/lib/auth";
+import cloudinary from "cloudinary";
 
-const uploadDir = path.join(process.cwd(), "public", "uploads");
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + "-" + file.originalname);
-  },
+cloudinary.v2.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
-const upload = multer({ storage });
-
-async function runMiddleware(req, res, fn) {
-  return new Promise((resolve, reject) => {
-    fn(req, res, (result) => {
-      if (result instanceof Error) {
-        return reject(result);
-      }
-      return resolve(result);
-    });
-  });
-}
 
 export async function POST(req) {
   await dbConnect();
+  const user = await getUserFromRequest(req);
+  if (!user?.userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const formData = await req.formData();
   const title = formData.get("title");
   const description = formData.get("description");
   const category = formData.get("category");
   const lat = formData.get("lat");
   const lng = formData.get("lng");
-  const userId = formData.get("userId");
   let image = "";
   const file = formData.get("image");
   if (file && typeof file === "object" && file.name) {
     const buffer = Buffer.from(await file.arrayBuffer());
-    const filename = Date.now() + "-" + file.name;
-    const filepath = path.join(uploadDir, filename);
-    fs.writeFileSync(filepath, buffer);
-    image = `/uploads/${filename}`;
+    const base64 = buffer.toString("base64");
+    const dataUri = `data:${file.type};base64,${base64}`;
+    try {
+      const uploadResult = await cloudinary.v2.uploader.upload(dataUri, {
+        folder: "complaints",
+      });
+      image = uploadResult.secure_url;
+    } catch (e) {
+      return NextResponse.json({ error: "Image upload failed" }, { status: 500 });
+    }
   }
   try {
     const priority = classifyPriority(`${title} ${description}`);
     const complaint = await Complaint.create({
-      userId,
+      userId: user.userId,
       title,
       description,
       category,
@@ -87,7 +75,6 @@ export async function GET(req) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   try {
-    // Prefer userId if available, fallback to email
     const filter = user.userId
       ? { userId: user.userId }
       : { userEmail: user.email };

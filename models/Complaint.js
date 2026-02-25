@@ -6,7 +6,7 @@ const ComplaintSchema = new mongoose.Schema(
     title: { type: String, required: true },
     description: { type: String, required: true },
     category: { type: String, required: true },
-    priority: { type: String, enum: ["HIGH", "NORMAL"], default: "NORMAL" },
+    priority: { type: String, enum: ["HIGH", "MEDIUM", "NORMAL", "LOW"], default: "NORMAL" },
     status: { type: String, default: "Pending" },
     image: { type: String },
     location: {
