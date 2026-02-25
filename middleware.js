@@ -19,10 +19,7 @@ export async function middleware(req) {
       if (ADMIN_PATHS.includes(pathname) && payload.role !== "ADMIN") {
         return NextResponse.redirect(new URL("/dashboard", req.url));
       }
-      // Restrict user pages to normal users only
-      if (USER_PATHS.includes(pathname) && payload.role === "ADMIN") {
-        return NextResponse.redirect(new URL("/admin", req.url));
-      }
+      // <-- Removed restriction for admins on USER_PATHS
     } catch {
       return NextResponse.redirect(new URL("/login", req.url));
     }
