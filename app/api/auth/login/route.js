@@ -1,4 +1,3 @@
-
 import dbConnect from "@/lib/db";
 import User from "@/models/User";
 import bcrypt from "bcrypt";
@@ -20,7 +19,11 @@ export async function POST(req) {
     if (!isMatch) {
       return new Response(JSON.stringify({ error: "Invalid credentials." }), { status: 401 });
     }
-    const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    const token = jwt.sign(
+      { userId: user._id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
     return new Response(
       JSON.stringify({ user: { name: user.name, email: user.email, role: user.role } }),
       {

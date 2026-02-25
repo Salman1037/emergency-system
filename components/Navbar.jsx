@@ -8,6 +8,7 @@ import { useAuth } from "./AuthContext";
 export default function Navbar() {
   const { user, loading } = useAuth();
   const [hovered, setHovered] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
 
   const colors = {
@@ -22,8 +23,6 @@ export default function Navbar() {
     white: "#ffffff",
     admin: "#ffb703",
   };
-
-
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", {
@@ -40,6 +39,10 @@ export default function Navbar() {
     .join("")
     .toUpperCase()
     .slice(0, 2);
+
+  const handleNavLinkClick = () => {
+    setMenuOpen(false);
+  };
 
   const navLink = (href, label, type = "normal") => {
     const isActive = pathname === href;
@@ -60,6 +63,7 @@ export default function Navbar() {
       <li className="nav-item" key={href}>
         <Link
           href={href}
+          onClick={handleNavLinkClick}
           onMouseEnter={() => setHovered(href)}
           onMouseLeave={() => setHovered(null)}
           className="nav-link"
@@ -84,33 +88,31 @@ export default function Navbar() {
 
   return (
     <>
-      <style jsx>{`
+      <style>{`
         @keyframes headerFlow {
-          0% {
-            background-position: 0% 50%;
-          }
-          50% {
-            background-position: 100% 50%;
-          }
-          100% {
-            background-position: 0% 50%;
-          }
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
         }
-
         @keyframes sosPulse {
-          0% {
-            box-shadow: 0 0 0 rgba(225, 6, 0, 0);
-          }
-          50% {
-            box-shadow: 0 0 14px rgba(225, 6, 0, 0.9);
-          }
-          100% {
-            box-shadow: 0 0 0 rgba(225, 6, 0, 0);
+          0%   { box-shadow: 0 0 0 rgba(225, 6, 0, 0); }
+          50%  { box-shadow: 0 0 14px rgba(225, 6, 0, 0.9); }
+          100% { box-shadow: 0 0 0 rgba(225, 6, 0, 0); }
+        }
+        @media (max-width: 991.98px) {
+          .navbar-collapse {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100vw;
+            background: linear-gradient(120deg, #06141f, #0c2534, #091b28, #0c2534);
+            z-index: 1000;
+            padding: 1rem 0;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.25);
           }
         }
       `}</style>
 
-      {/* OUTER WRAPPER FOR WHOLE HEADER FEEL */}
       <div
         style={{
           position: "sticky",
@@ -120,7 +122,6 @@ export default function Navbar() {
           WebkitBackdropFilter: "blur(10px)",
         }}
       >
-        {/* TOP ALERT STRIP */}
         <div
           style={{
             height: 3,
@@ -142,7 +143,7 @@ export default function Navbar() {
               "0 10px 30px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.03)",
           }}
         >
-          <div className="container-fluid">
+          <div className="container-fluid position-relative">
             <Link
               href="/"
               className="navbar-brand fw-bold fs-4"
@@ -151,6 +152,7 @@ export default function Navbar() {
                 letterSpacing: "0.6px",
                 textShadow: "0 0 12px rgba(255,140,26,0.7)",
               }}
+              onClick={handleNavLinkClick}
             >
               Emergency System
             </Link>
@@ -158,21 +160,31 @@ export default function Navbar() {
             <button
               className="navbar-toggler"
               type="button"
-              data-bs-toggle="collapse"
-              data-bs-target="#navbarNav"
+              aria-label="Toggle navigation"
+              aria-expanded={menuOpen}
+              onClick={() => setMenuOpen((open) => !open)}
+              style={{
+                border: `1px solid ${colors.orange}`,
+                background: "rgba(255,140,26,0.08)",
+                borderRadius: 8,
+                padding: 6,
+              }}
             >
-              <span className="navbar-toggler-icon"></span>
+              <span className="navbar-toggler-icon" />
             </button>
 
-            <div className="collapse navbar-collapse" id="navbarNav">
+            <div
+              className={`collapse navbar-collapse${menuOpen ? " show" : ""}`}
+              id="navbarNav"
+            >
               <ul className="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center gap-lg-1">
                 {navLink("/dashboard", "Dashboard")}
                 {navLink("/complaints", "Complaints")}
 
-                {/* SOS */}
                 <li className="nav-item">
                   <Link
                     href="/sos"
+                    onClick={handleNavLinkClick}
                     onMouseEnter={() => setHovered("/sos")}
                     onMouseLeave={() => setHovered(null)}
                     className="nav-link"

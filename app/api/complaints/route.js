@@ -1,4 +1,3 @@
-
 import dbConnect from "@/lib/db";
 import Complaint from "@/models/Complaint";
 import { NextResponse } from "next/server";
@@ -7,6 +6,8 @@ import path from "path";
 import fs from "fs";
 import { classifyPriority } from "@/lib/priority";
 import { sendMail } from "@/lib/mailer";
+import db from "@/lib/db";
+import { getUserFromRequest } from "@/lib/auth"; // You must implement this
 
 const uploadDir = path.join(process.cwd(), "public", "uploads");
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
@@ -20,7 +21,6 @@ const storage = multer.diskStorage({
   },
 });
 const upload = multer({ storage });
-
 
 async function runMiddleware(req, res, fn) {
   return new Promise((resolve, reject) => {
@@ -75,6 +75,24 @@ export async function POST(req) {
       }
     }
     return NextResponse.json({ message: "Complaint submitted", complaint });
+  } catch (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+export async function GET(req) {
+  await dbConnect();
+  const user = await getUserFromRequest(req);
+  if (!user?.email && !user?.userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  try {
+    // Prefer userId if available, fallback to email
+    const filter = user.userId
+      ? { userId: user.userId }
+      : { userEmail: user.email };
+    const complaints = await Complaint.find(filter).sort({ createdAt: -1 });
+    return NextResponse.json(complaints);
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

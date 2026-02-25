@@ -10,14 +10,19 @@ export async function POST(req) {
     if (!lat || !lng) {
       return NextResponse.json({ error: "Location required" }, { status: 400 });
     }
-    // Extract user from request cookies
-    const { getUserFromRequest } = await import("@/lib/auth");
-    const user = getUserFromRequest(req);
-    if (!user || !user.userId) {
-      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+
+    // Try to get user info, but allow guests
+    let userId = null;
+    try {
+      const { getUserFromRequest } = await import("@/lib/auth");
+      const user = await getUserFromRequest(req); // <-- await is important!
+      if (user && user.userId) userId = user.userId;
+    } catch (e) {
+      // ignore, allow guest
     }
+
     const sos = await SOSAlert.create({
-      userId: user.userId,
+      userId, // will be null for guests
       location: { lat, lng },
       status: "Active",
     });
@@ -25,7 +30,7 @@ export async function POST(req) {
     // Send email to authorities
     const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
     await sendMail({
-      to: process.env.EMAIL_USER, // Change to authority email(s) as needed
+      to: process.env.EMAIL_USER,
       subject: "🚨 SOS Alert Triggered!",
       text: `An SOS alert was triggered at the following location:\n\nGoogle Maps: ${mapsUrl}\n\nLatitude: ${lat}\nLongitude: ${lng}\n\nPlease respond immediately.`,
       html: `<h2>🚨 SOS Alert Triggered!</h2>
